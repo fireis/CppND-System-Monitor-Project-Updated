@@ -27,6 +27,7 @@ string LinuxParser::OperatingSystem() {
       while (linestream >> key >> value) {
         if (key == "PRETTY_NAME") {
           std::replace(value.begin(), value.end(), '_', ' ');
+          filestream.close();
           return value;
         }
       }
@@ -45,6 +46,7 @@ string LinuxParser::Kernel() {
     std::istringstream linestream(line);
     linestream >> os >> version >> kernel;
   }
+  stream.close();
   return kernel;
 }
 
@@ -60,7 +62,7 @@ vector<int> LinuxParser::Pids() {
       string filename(file->d_name);
       if (std::all_of(filename.begin(), filename.end(), isdigit)) {
         int pid = stoi(filename);
-        pids.push_back(pid);
+        pids.emplace_back(pid);
       }
     }
   }
@@ -83,15 +85,15 @@ float LinuxParser::MemoryUtilization() {
       std::istringstream linestream(line);
 
       while (linestream >> key >> value) {
-        if (key == "MemTotal") {
+        if (key == filterMemTotalString) {
           avalilabe_mem = stoi(value);
         }
-        if (key == "MemFree") {
+        if (key == filterMemFreeString) {
           free_mem = stoi(value);
         }
       }
     }
-
+    filestream.close();
     return (avalilabe_mem - free_mem) / avalilabe_mem;
   }
   return 0.0;
@@ -124,14 +126,15 @@ vector<long int> LinuxParser::JiffiesInfos() {
       std::istringstream linestream(line);
 
       while (linestream >> key) {
-        if (key == "cpu") {
+        if (key == filterCpu) {
           while (linestream >> stat) {
-            cpu_usages.push_back(stol(stat));
+            cpu_usages.emplace_back(stol(stat));
           }
         }
       }
     }
   }
+  filestream.close();
   return cpu_usages;
 }
 
@@ -151,7 +154,7 @@ long LinuxParser::ActiveJiffies() {
 // TODO: Read and return the number of idle jiffies for the system
 long LinuxParser::IdleJiffies() { return LinuxParser::JiffiesInfos()[3]; }
 
-vector<long int> LinuxParser::CpuUtilization() {
+vector<unsigned long long int> LinuxParser::CpuUtilization() {
   string line;
   string key;
   string value;
@@ -161,12 +164,13 @@ vector<long int> LinuxParser::CpuUtilization() {
     while (std::getline(filestream, line)) {
       std::istringstream linestream(line);
       string stat;
-      vector<long int> cpu_usages;
+      vector<unsigned long long int> cpu_usages;
       while (linestream >> key) {
-        if (key == "cpu") {
+        if (key == filterCpu) {
           while (linestream >> stat) {
-            cpu_usages.push_back(stol(stat));
+            cpu_usages.emplace_back(stoll(stat));
           }
+          filestream.close();
           return cpu_usages;
         }
       }
@@ -190,12 +194,12 @@ int LinuxParser::TotalProcesses() {
       std::istringstream linestream(line);
 
       while (linestream >> key >> value) {
-        if (key == "processes") {
+        if (key == filterProcesses) {
           processes = stoi(value);
         }
       }
     }
-
+    filestream.close();
     return processes;
   }
   return 0;
@@ -214,12 +218,12 @@ int LinuxParser::RunningProcesses() {
       std::istringstream linestream(line);
 
       while (linestream >> key >> value) {
-        if (key == "procs_running") {
+        if (key == filterRunningProcesses) {
           processes = stoi(value);
         }
       }
     }
-
+    filestream.close();
     return processes;
   }
   return 0;
